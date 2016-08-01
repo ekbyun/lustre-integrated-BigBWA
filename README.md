@@ -11,7 +11,7 @@ The goal of this project is to complement BigBWA(https://github.com/citiususc/Bi
 # Install
 1. Mount lustre file system and create directory <lustre mount point>/hadoop/user/<username> and grant permission to user who will run Hadoop
 2. check if MPI is installed by run "mpicc --version" and "mpirun --version"
-3. Download apache hadoop src, apply patch(MAPRED-6636.patch) for handling large file(greater than 2GB), build and install
+3. Download apache hadoop src, apply patch(MAPRED-6636.patch,https://issues.apache.org/jira/browse/HADOOP-6636) for handling large file(greater than 2GB), build and install
 4. Install lustre-hadoop adapter and configure hadoop
 5. Configure hadoop, 
   in <hadoop home>/etc/hadoop/core-site.xml add
