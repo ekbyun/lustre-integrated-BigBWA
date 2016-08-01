@@ -19,7 +19,11 @@ The goal of this project is to complement BigBWA(https://github.com/citiususc/Bi
   <name>fs.lustrefs.shared_tmp.dir</name>
   <value>${fs.lustrefs.mount}/user/${user.name}/shared-tmp</value>
 </property>
-6. Download lustre-integrated BigBWA, copy files in /src to BigBWA/src, and apply patches(Makefile, Makefile on BigBWA directory
+6. Download lustre-integrated BigBWA, copy files in /src to BigBWA/src, and apply patches(Makefile, Makefile.common, src/BigBWA.java) on BigBWA directory
 7. build BigBWA 
 
 # Run
+on build directory run run.sh
+USAGE : run.sh <# of partitions> <# of threads per mapper> <input_1> <input_2> <outputdir (relative in HDFS user home)>
+   input output file location is relative path from HDFS user home directory
+   
