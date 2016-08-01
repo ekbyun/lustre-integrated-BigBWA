@@ -1,0 +1,405 @@
+--- src/BigBWA.java
++++ src/BigBWA.java
+@@ -145,37 +145,44 @@
+ 		conf.set("outputGenomics",outputPath);
+ 		
+ 		//==================Partition number==================
+-		if(options.getPartitionNumber() != 0) {
+-			try {
+-				FileSystem fs = FileSystem.get(conf);
+-				
+-				Path inputFilePath = new Path(inputPath);
+-				
+-				ContentSummary cSummary = fs.getContentSummary(inputFilePath);
+-
++		FileSystem fs = null;
++		Path inputFilePath = null;
++		try {
++			fs = FileSystem.get(conf);
++		
++			inputFilePath = new Path(inputPath);
+ 
++			if(options.getPartitionNumber() != 0) {
++				ContentSummary cSummary = fs.getContentSummary(inputFilePath);
+ 				long length = cSummary.getLength();
+-
+-
+-				fs.close();
+-				
+ 				conf.set("mapreduce.input.fileinputformat.split.maxsize", String.valueOf((length)/options.getPartitionNumber()));
+ 				conf.set("mapreduce.input.fileinputformat.split.minsize", String.valueOf((length)/options.getPartitionNumber()));
+ 			}
+-			catch (IOException e) {
+-				// TODO Auto-generated catch block
+-				e.printStackTrace();
+-				LOG.error(e.toString());
++		}
++		catch (IOException e) {
++			// TODO Auto-generated catch block
++			e.printStackTrace();
++			LOG.error(e.toString());
+ 
+-				System.exit(1);;
+-			}
+-			
++			System.exit(1);;
+ 		}
+ 		
++		//-----------------------MODIFIED----------------------
++		BufferedReader d = new BufferedReader(new InputStreamReader(fs.open(inputFilePath)));
++		String delim = d.readLine().substring(0,8);
++
++		d.close();
++		fs.close();
++
++		conf.set("textinputformat.record.delimiter","\n" + delim);
++		conf.set("headerBytes", delim.toString());
++	//	String stdir = conf.get("headerBytes");
++	//	System.out.println("!!!!!!!!!!!!!!!! headerBytes = " + stdir);
+ 		
+ 		//Job job = new Job(conf,"BigBWA_"+outputPath);
+ 		Job job = Job.getInstance(conf,"BigBWA_"+outputPath);
+ 		
++//		job.setInputFormat(TextInputFormat.class);
+ 		
+ 		job.setJarByClass(BigBWA.class);
+ 		job.setMapperClass(BigBWAMap.class);
+@@ -209,23 +216,25 @@
+ 	//Mapper class. We follow the In-Mapper Combining pattern
+ 	public static class BigBWAMap extends Mapper<Object,Text,IntWritable,Text> {
+ 
+-		File fout;
+-		FileOutputStream fos;
+-		BufferedWriter bw;
+ 		int identificador;
+ 		
+-		String tmpFileString = "";
+ 		int jobID;
+ 
++		String tmpFileString = "";
++		File fout;
++		FileOutputStream fos;
++		BufferedWriter bw;
++		boolean f1exist;
++
+ 		String tmpFileString2 = "";
+ 		File fout2;
++		FileOutputStream fos2;
++	//	BufferedWriter bw2;
+ 		
+ 		//SAI files
++		
+ 		String saiFile1 = "";
+ 		String saiFile2 = "";
+-		
+-		FileOutputStream fos2;
+-		BufferedWriter bw2;
+ 
+ 		String[] initValues;
+ 		String[] values1;
+@@ -235,7 +244,9 @@
+ 		String indexRoute;
+ 
+ 		String outputFileName = "";
+-		
++
++		String header;		
++
+ 		//In the setup, we create each split local file
+ 		@Override
+ 		protected void setup(Context context) {
+@@ -245,24 +256,29 @@
+ 
+ 			Configuration conf = context.getConfiguration();
+ 
+-			tmpDir = conf.get("hadoop.tmp.dir");
+ 			indexRoute = conf.get("indexRoute");
+ 
+-			tmpFileString = tmpDir+"/HadoopTMPFile-"+identificador+"-"+String.valueOf(jobID);
++			header = conf.get("headerBytes");
+ 
+-			fout = new File(tmpFileString);
+-			try {
+-				fos = new FileOutputStream(fout);
+-			} catch (FileNotFoundException e) {
+-				// TODO Auto-generated catch block
+-				e.printStackTrace();
+-			}
++			/* MODIFIED */
++		//	tmpDir = conf.get("hadoop.tmp.dir");
++			tmpDir = conf.get("fs.lustrefs.shared_tmp.dir");
+ 
+-			bw = new BufferedWriter(new OutputStreamWriter(fos));
++			tmpFileString = tmpDir+"/BigBWA_input_temp-"+identificador;
+ 
++			fout = new File(tmpFileString);
++			f1exist = fout.exists();
++			if( !f1exist ) {
++				try {
++					fos = new FileOutputStream(fout);
++				} catch (FileNotFoundException e) {
++					// TODO Auto-generated catch block
++					e.printStackTrace();
++				}
+ 
+-			if((conf.get("paired").equals("true"))){
+-				tmpFileString2 = tmpDir+"/HadoopTMPFile-"+identificador+"_2"+"-"+String.valueOf(jobID);
++				bw = new BufferedWriter(new OutputStreamWriter(fos));
++			} else if(conf.get("paired").equals("true")){
++				tmpFileString2 = tmpDir+"/BigBWA_input_temp-"+identificador+"_2";
+ 				fout2 = new File(tmpFileString2);
+ 
+ 				try {
+@@ -272,7 +288,8 @@
+ 					e.printStackTrace();
+ 				}
+ 
+-				bw2 = new BufferedWriter(new OutputStreamWriter(fos2));
++			//	bw2 = new BufferedWriter(new OutputStreamWriter(fos2));
++				bw = new BufferedWriter(new OutputStreamWriter(fos2));
+ 			}
+ 
+ 		} 
+@@ -281,9 +298,12 @@
+ 		@Override
+ 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+ 			try{
+-
+ 				Configuration conf = context.getConfiguration();
+ 
++				bw.write(header);
++				bw.write(value.toString());
++				bw.newLine();
++				/*
+ 				if((conf.get("paired").equals("true"))){
+ 
+ 					initValues = value.toString().split("<part>");
+@@ -316,6 +336,7 @@
+ 					}
+ 					values1=null;
+ 				}
++				*/
+ 
+ 
+ 			}
+@@ -329,20 +350,20 @@
+ 		public void cleanup(Context context) throws InterruptedException{
+ 
+ 			try {
++				bw.close();
++
++			//	if( f1exist )return;
++				if( !f1exist ) return;
+ 
+ 				Configuration conf = context.getConfiguration();
+ 				String[] args;
+-				
+-
+-				bw.close();
+ 
+-				String outputDir = context.getConfiguration().get("outputGenomics");
++				String outputDir = conf.get("outputGenomics");
++				tmpDir = conf.get("fs.lustrefs.mount")+"/user/"+System.getProperty("user.name") +"/" + outputDir;
+ 				
+ 				//Paired algorithms
+ 				if((conf.get("paired").equals("true"))){
+-					bw2.close();
+-
+-					
++				//	bw2.close();
+ 
+ 					if(conf.get("bwathreads")!=null && !conf.get("bwathreads").equals("")){
+ 						args = new String[9];
+@@ -350,7 +371,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "mem";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = "-t";
+ 						args[5] = conf.get("bwathreads");
+ 						args[6] = indexRoute;
+@@ -368,7 +389,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "mem";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = indexRoute;
+ 						args[5] = tmpFileString;
+ 						args[6] = tmpFileString2;
+@@ -384,7 +405,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "bwasw";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = indexRoute;
+ 						args[5] = tmpFileString;
+ 						args[6] = tmpFileString2;
+@@ -397,8 +418,8 @@
+ 					else if((conf.get("aln")!=null)&&(conf.get("aln").equals("true"))){
+ 						args = new String[6];
+ 
+-						this.saiFile1 = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sai";
+-						this.saiFile2 = tmpDir+"/Output"+this.identificador+"-2-"+String.valueOf(jobID)+".sai";
++						this.saiFile1 = tmpDir+"/Output"+this.identificador+".sai";
++						this.saiFile2 = tmpDir+"/Output"+this.identificador+"-2.sai";
+ 
+ 						args[0] = "bwa";
+ 						args[1] = "aln";
+@@ -432,7 +453,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "sampe";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = indexRoute;
+ 						args[5] = saiFile1;
+ 						args[6] = saiFile2;
+@@ -458,20 +479,23 @@
+ 					}
+ 
+ 					//We copy the results to HDFS and delete tmp files from local filesystem
+-					FileSystem fs = FileSystem.get(context.getConfiguration());
++				//	FileSystem fs = FileSystem.get(context.getConfiguration());
+ 
+-					fs.copyFromLocalFile(new Path(outputFileName), new Path(outputDir+"/Output"+this.identificador+".sam"));
+-					fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+"_1.fq"));
+-					fs.copyFromLocalFile(new Path(tmpFileString2), new Path(outputDir+"/Input"+this.identificador+"_2.fq"));
++				//	fs.copyFromLocalFile(new Path(outputFileName), new Path(outputDir+"/Output-"+this.identificador+".sam"));
++				//	fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+"_1.fq"));
++				//	fs.copyFromLocalFile(new Path(tmpFileString2), new Path(outputDir+"/Input"+this.identificador+"_2.fq"));
+ 
+-					File outputFile = new File(outputFileName);
+-					outputFile.delete();
++				//	File outputFile = new File(outputFileName);
++				//	outputFile.delete();
+ 
+-					fout.delete();
+-					fout2.delete();
++					if( f1exist ) {
++						fout.delete();
++						fout2.delete();
++					}
+ 
+ 					if((conf.get("useReducer")!=null)&&(conf.get("useReducer").equals("true"))){
+-						context.write(new IntWritable(this.identificador), new Text(outputDir+"/Output"+this.identificador+".sam"));
++						context.write(new IntWritable(this.identificador), new Text(outputDir+"/Output-"+this.identificador+".sam"));
++				//		context.write(new IntWritable(this.identificador), new Text(outputFileName));
+ 					}
+ 
+ 
+@@ -485,7 +509,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "mem";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = indexRoute;
+ 						args[5] = tmpFileString;
+ 
+@@ -493,13 +517,13 @@
+ 						BwaJni.Bwa_Jni(args);
+ 
+ 						//We copy the results to HDFS and delete tmp files from local filesystem
+-						FileSystem fs = FileSystem.get(context.getConfiguration());
++				//		FileSystem fs = FileSystem.get(context.getConfiguration());
+ 
+-						fs.copyFromLocalFile(new Path(args[3]), new Path(outputDir+"/Output"+this.identificador+".sam"));
+-						fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+".fq"));
++				//		fs.copyFromLocalFile(new Path(args[3]), new Path(outputDir+"/Output"+this.identificador+".sam"));
++				//		fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+".fq"));
+ 
+-						File outputFile = new File(args[3]);
+-						outputFile.delete();
++				//		File outputFile = new File(args[3]);
++				//		outputFile.delete();
+ 						fout.delete();
+ 
+ 					}
+@@ -510,7 +534,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "bwasw";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = indexRoute;
+ 						args[5] = tmpFileString;
+ 
+@@ -520,20 +544,20 @@
+ 						BwaJni.Bwa_Jni(args);
+ 
+ 						//We copy the results to HDFS and delete tmp files from local filesystem
+-						FileSystem fs = FileSystem.get(context.getConfiguration());
++				//		FileSystem fs = FileSystem.get(context.getConfiguration());
+ 
+-						fs.copyFromLocalFile(new Path(args[3]), new Path(outputDir+"/Output"+this.identificador+".sam"));
+-						fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+".fq"));
++				//		fs.copyFromLocalFile(new Path(args[3]), new Path(outputDir+"/Output"+this.identificador+".sam"));
++				//		fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+".fq"));
+ 
+-						File outputFile = new File(args[3]);
+-						outputFile.delete();
++				//		File outputFile = new File(args[3]);
++				//		outputFile.delete();
+ 						fout.delete();
+ 
+ 					}
+ 					else if(conf.get("aln").equals("true")){
+ 						args = new String[6];
+ 						
+-						String saiFile = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sai";
++						String saiFile = tmpDir+"/Output"+this.identificador+".sai";
+ 
+ 						args[0] = "bwa";
+ 						args[1] = "aln";
+@@ -549,7 +573,7 @@
+ 						args[0] = "bwa";
+ 						args[1] = "samse";
+ 						args[2] = "-f";
+-						args[3] = tmpDir+"/Output"+this.identificador+"-"+String.valueOf(jobID)+".sam";
++						args[3] = tmpDir+"/Output"+this.identificador+".sam";
+ 						args[4] = indexRoute;
+ 						args[5] = saiFile;
+ 						args[6] = tmpFileString;
+@@ -567,23 +591,22 @@
+ 						//We copy the results to HDFS and delete tmp files from local filesystem
+ 						//String outputDir = context.getConfiguration().get("outputGenomics");
+ 
+-						FileSystem fs = FileSystem.get(context.getConfiguration());
+-
+-						fs.copyFromLocalFile(new Path(args[3]), new Path(outputDir+"/Output"+this.identificador+".sai"));
+-						fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+".fq"));
++				//		FileSystem fs = FileSystem.get(context.getConfiguration());
+ 
+-						File outputFile = new File(args[3]);
++				//		fs.copyFromLocalFile(new Path(args[3]), new Path(outputDir+"/Output"+this.identificador+".sai"));
++				//		fs.copyFromLocalFile(new Path(tmpFileString), new Path(outputDir+"/Input"+this.identificador+".fq"));
+ 
++				//		File outputFile = new File(args[3]);
++				//		outputFile.delete();
+ 						fout.delete();
+-						outputFile.delete();
+ 					}
+ 					
+ 					if((conf.get("useReducer")!=null)&&(conf.get("useReducer").equals("true"))){
+-						context.write(new IntWritable(this.identificador), new Text(outputDir+"/Output"+this.identificador+".sam"));
++				//		context.write(new IntWritable(this.identificador), new Text(outputDir+"/Output"+this.identificador+".sam"));
++						context.write(new IntWritable(this.identificador), new Text(outputFileName));
+ 					}
+ 
+ 				}
+-
+ 			} catch (Exception e) {
+ 				// TODO Auto-generated catch block
+ 				e.printStackTrace();
+@@ -592,7 +615,7 @@
+ 				
+ 				//FASTQ splits
+ 				this.fout.delete();
+-				this.fout2.delete();
++				if( this.fout != null ) this.fout2.delete();
+ 				
+ 				//SAI outputs
+ 				if(!this.saiFile1.isEmpty()){

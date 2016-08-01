@@ -1,0 +1,8 @@
+--- Makefile.common
++++ Makefile.common
+@@ -1,4 +1,5 @@
+ CC = gcc
++MPICC = mpicc
+ JAVAC = javac
+ JAR = jar
+ RMR = rm -Rf

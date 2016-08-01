@@ -1,0 +1,11 @@
+--- Makefile
++++ Makefile
+@@ -27,6 +27,8 @@
+ 	$(JAVAC) -cp $(JAR_FILES) -d $(BUILD_DIR) -Xlint:none $(SRC_DIR)/*.java
+ 	cd $(BUILD_DIR) && $(JAR) cfe BigBWA.jar BigBWA ./*.class && cd ..
+ 	cd $(BUILD_DIR) && $(JAR) cfe BigBWASeq.jar BwaSeq ./*.class && cd ..
++	$(MPICC) -o $(BUILD_DIR)/reduce $(SRC_DIR)/merge.c
++	cp $(SRC_DIR)/run.sh $(BUILD_DIR)
+ 
+ clean:
+ 	$(RMR) $(BUILD_DIR)
