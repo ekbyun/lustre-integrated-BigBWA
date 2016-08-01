@@ -17,11 +17,8 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
   in <hadoop home>/etc/hadoop/core-site.xml add
 
 \<property\>
-
     \<name\>fs.lustrefs.shared_tmp.dir\</name\>
-
     \<value\>${fs.lustrefs.mount}/user/${user.name}/shared-tmp\</value\>
-
 \</property\>
 
 6. Download lustre-integrated BigBWA, copy files in /src to BigBWA/src, and apply patches(Makefile, Makefile.common, src/BigBWA.java) on BigBWA directory
