@@ -24,6 +24,7 @@ The goal of this project is to complement BigBWA(https://github.com/citiususc/Bi
 
 # Run
 on build directory run run.sh
+
 USAGE : run.sh <# of partitions> <# of threads per mapper> <input_1> <input_2> <outputdir (relative in HDFS user home)>
    input output file location is relative path from HDFS user home directory
    
