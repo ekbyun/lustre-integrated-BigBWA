@@ -25,10 +25,11 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
 7. build BigBWA 
 
 # Run
-1. locate input files (pair of .fastq)  under \<lustre mount\>/hadoop/user/\<username\>/
-2. on build directory run run.sh
+1. Locate input files (pair of .fastq)  under \<lustre mount\>/hadoop/user/\<username\>/
+2. Set environment variable "LUSTRE_ADAPTER" for the location of lustrefs-hadoop jar file and "RG" for the location of reference genome .fa file in build/run.sh
+3. On build directory, execute run.sh
 
         USAGE : run.sh <# of partitions> <# of threads per mapper> <input_1> <input_2> <outputdir>
            * input output file location is relative path from HDFS user home directory
 
-3. output file will be created on \<lustre mount\>/hadoop/user/\<username\>/\<outputdir\>/merged.sam
+4. An output file will be created on \<lustre mount\>/hadoop/user/\<username\>/\<outputdir\>/merged.sam
