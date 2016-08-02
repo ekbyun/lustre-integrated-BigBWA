@@ -6,7 +6,7 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
 - Apache Hadoop 2.6.0 or later
 - Mountable Lustre file system
 - Lustre-Hadoop Adapter(https://github.com/Seagate/lustrefs)
-- MPI (OpenMPI or mvapich)
+- MPI
 
 # Install
 1. Mount lustre file system and create directory \<lustre mount point\>/hadoop/user/\<username\> and grant permission to user who will run Hadoop
