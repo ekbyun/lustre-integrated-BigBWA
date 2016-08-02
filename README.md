@@ -22,7 +22,7 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
          </property>
 
 6. Download lustre-integrated BigBWA, copy files in /src to BigBWA/src, and apply patches(Makefile, Makefile.common, src/BigBWA.java) on BigBWA directory
-7. build BigBWA 
+7. Build BigBWA with "make"
 
 # Run
 1. Locate input files (pair of .fastq)  under \<lustre mount\>/hadoop/user/\<username\>/
