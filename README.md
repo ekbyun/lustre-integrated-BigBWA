@@ -4,7 +4,7 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
 # Requirements
 - BigBWA(https://github.com/citiususc/BigBWA)
 - Apache Hadoop 2.6.0 or later
-- mountable Lustre file system
+- Mountable Lustre file system
 - Lustre-Hadoop Adapter(https://github.com/Seagate/lustrefs)
 - MPI (OpenMPI or mvapich)
 
