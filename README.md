@@ -3,7 +3,7 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
 
 # Requirements
 - BigBWA(https://github.com/citiususc/BigBWA)
-- Apache Hadoop 2.6.0 or later
+- Apache Hadoop 2.7.3 or later
 - Mountable Lustre file system
 - Lustre-Hadoop Adapter(https://github.com/Seagate/lustrefs)
 - MPI
@@ -11,7 +11,7 @@ The goal of lustre-integrated BigBWA is to complement BigBWA(https://github.com/
 # Install
 1. Mount lustre file system and create directory \<lustre mount point\>/hadoop/user/\<username\> and grant permission to user who will run Hadoop
 2. Check if MPI is installed by run "mpicc --version" and "mpirun --version"
-3. Download apache hadoop src, apply patch(MAPRED-6636.patch,https://issues.apache.org/jira/browse/HADOOP-6636) for handling large file(greater than 2GB), build and install
+3. If you use Hadoop 2.7.2, apply patch(MAPRED-6636.patch,https://issues.apache.org/jira/browse/HADOOP-6636) for handling large file(greater than 2GB), build and install
 4. Install lustre-hadoop adapter and configure hadoop
 5. Configure hadoop, 
   in <hadoop home>/etc/hadoop/core-site.xml add
